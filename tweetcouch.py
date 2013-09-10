@@ -3,12 +3,13 @@ from couchdb.design import ViewDefinition
 
 
 class TweetCouch(object):
-	def __init__(self, dbname):
-		self.server = couchdb.Server()
+	def __init__(self, dbname, url=None):
+		self.server = couchdb.Server(url=url)
 		try:
 			self.db = self.server.create(dbname)
 			self._create_views()
-		except:
+		except Exception as e:
+			print '***', str(e)
 			self.db = self.server[dbname]
 
 	def _create_views(self):

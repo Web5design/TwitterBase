@@ -14,11 +14,14 @@ WinService.install(MyService, 'MyService')
 '''
 
 from os.path import splitext, abspath
+from sys import executable
 from sys import modules
+import servicemanager
 import win32serviceutil
 import win32service
 import win32event
 import win32api
+
 
 class Service(win32serviceutil.ServiceFramework):
 	_svc_name_ = '_unNamed'
@@ -35,11 +38,10 @@ class Service(win32serviceutil.ServiceFramework):
 			self.log(msg)
 		
 	def log(self, msg):
-		import servicemanager
 		servicemanager.LogInfoMsg(str(msg))
 
-        def sleep(self, sec):
-                win32api.Sleep(sec*1000, True)
+	def sleep(self, sec):
+		win32api.Sleep(sec*1000, True)
 				
 	def SvcDoRun(self):
 		self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
@@ -66,27 +68,57 @@ class Service(win32serviceutil.ServiceFramework):
 	def start(self): pass
 	def stop(self): pass
 
+	
 def install(cls, name, display_name=None, stay_alive=True):
-    cls._svc_name_ = name
-    cls._svc_display_name_ = display_name or name
-    try:
-        module_path = modules[cls.__module__].__file__
-    except AttributeError:
-        from sys import executable
-        module_path=executable
-    module_file = splitext(abspath(module_path))[0]
-    cls._svc_reg_class_ = '%s.%s' % (module_file, cls.__name__)
-    if stay_alive: 
+	cls._svc_name_ = name
+	cls._svc_display_name_ = display_name or name
+	try:
+		module_path = modules[cls.__module__].__file__
+	except AttributeError:
+		module_path=executable
+	module_file = splitext(abspath(module_path))[0]
+	cls._svc_reg_class_ = '%s.%s' % (module_file, cls.__name__)
+	if stay_alive: 
 		win32api.SetConsoleCtrlHandler(lambda x: True, True)
-    try:
-        win32serviceutil.InstallService(
-                cls._svc_reg_class_,
-                cls._svc_name_,
-                cls._svc_display_name_,
-                startType=win32service.SERVICE_AUTO_START
-                )
-        print 'Install ok'
-        win32serviceutil.StartService(cls._svc_name_)
-        print 'Start ok'
-    except Exception, x:
-        print str(x)
+	try:
+		win32serviceutil.InstallService(
+			cls._svc_reg_class_,
+			cls._svc_name_,
+			cls._svc_display_name_,
+			startType=win32service.SERVICE_AUTO_START
+		)
+		print 'Install ok'
+		win32serviceutil.StartService(cls._svc_name_)
+		print 'Start ok'
+	except Exception, x:
+		print str(x)
+		
+def start(display_name):
+	try:
+		win32serviceutil.StartService(display_name)
+		print 'Start ok'
+	except Exception, x:
+		print str(x)
+		
+def stop(display_name):
+	try:
+		win32serviceutil.StopService(display_name)
+		print 'Stop ok'
+	except Exception, x:
+		print str(x)
+		
+def restart(display_name):
+	try:
+		win32serviceutil.RestartService(display_name)
+		print 'Restart ok'
+	except Exception, x:
+		print str(x)
+		
+def status(display_name):
+	try:
+		if win32serviceutil.QueryServiceStatus(display_name)[1] == 4:
+			print '%s is running' % display_name
+		else:
+			print '%s is NOT running' % display_name
+	except Exception, x:
+		print str(x)

@@ -7,7 +7,7 @@ from TwitterAPI.TwitterOAuth import TwitterOAuth
 from TwitterAPI.TwitterAPI import TwitterAPI
 
 
-# -dbname twdb2 -oauth credentials.txt -endpoint statuses/filter -parameters track=zzz
+#-couchurl http://127.0.0.1:5984/ -dbname twdb2 -oauth credentials.txt -endpoint statuses/filter -parameters track=zzz
 CONFIG = 'twitterbase.cfg'
 LOG = None
 
@@ -25,12 +25,15 @@ def run(log):
 	LOG = log
 
 	parser = argparse.ArgumentParser(description='Request any Twitter Streaming or REST API endpoint')
+	parser.add_argument('-couchurl', metavar='COUCHURL, type=str, help='complete url for couchdb')
 	parser.add_argument('-dbname', metavar='DBNAME', type=str, help='database name')
 	parser.add_argument('-oauth', metavar='FILENAME', type=str, help='file containing OAuth credentials')
 	parser.add_argument('-endpoint', metavar='ENDPOINT', type=str, help='Twitter endpoint', required=True)
 	parser.add_argument('-parameters', metavar='NAME_VALUE', type=str, help='parameter NAME=VALUE', nargs='+')
 
-	with open(CONFIG) as f:
+	path = os.path.dirname(__file__)
+	config_path = os.path.join(path, CONFIG)
+	with open(config_path) as f:
 		args = f.read()
 		args = parser.parse_args(args.split())	
 
@@ -38,7 +41,7 @@ def run(log):
 	o = TwitterOAuth.read_file(args.oauth)
 	api = TwitterAPI(o.consumer_key, o.consumer_secret, o.access_token_key, o.access_token_secret)
 
-	storage = tweetcouch.TweetCouch(args.dbname)
+	storage = tweetcouch.TweetCouch(args.dbname, args.couchurl)
 
 	while True:
 		try:
@@ -49,7 +52,8 @@ def run(log):
 				if 'message' in item:
 					LOG.write('ERROR %s: %s\n' % (item['code'], item['message']))
 				elif 'text' in item:
-					storage.save_tweet(item)
+					if item['lang'] == 'en':
+						storage.save_tweet(item)
 				elif 'limit' in item:
 					pass # count skipped tweets
 						
